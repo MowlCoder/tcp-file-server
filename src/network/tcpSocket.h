@@ -1,15 +1,32 @@
 #pragma once
 
+#include "socket.h"
+
+#include <string>
 #include <cstdlib>
+#include <memory>
+
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #include <WinSock2.h>
+    #include <WS2tcpip.h>
+#else
+    #include <sys/socket.h>
+#endif
 
 class TCPSocket {
 private:
-    int _socketFd;
+    std::shared_ptr<Socket> _socket;
+    addrinfo* _addr;
+    const std::string _ip;
+    const std::string _port;
 public:
-    int sendData(void* buf, size_t size);
-    int recvData(void* buf, size_t size);
+    void initSocket();
+    void closeSocket();
 
-    int getSocketFd() const;
+    const int getSocketFd() const;
+    std::shared_ptr<Socket> getSocket() const;
+    const addrinfo* getAddr() const;
 
-    TCPSocket(const int socketFd) : _socketFd(socketFd) {}
+    TCPSocket(const std::string& ip, const std::string& port) : _ip(ip), _port(port) {}
 };

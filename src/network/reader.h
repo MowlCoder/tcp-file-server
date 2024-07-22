@@ -1,13 +1,14 @@
 #pragma once
 
-#include "tcpSocket.h"
+#include "socket.h"
 
 #include <string>
 #include <vector>
+#include <memory>
 
 class NetworkReader {
 private:
-    TCPSocket* _tcpSocket;
+    std::shared_ptr<Socket> _socket;
 public:
     std::string ReadString() const;
     int32_t ReadInt32() const;
@@ -15,5 +16,6 @@ public:
 
     std::vector<std::string> ReadStringList() const;
     void ReadFile(const std::string& defaultPath) const;
-    NetworkReader(TCPSocket* tcpSocket);
+
+    NetworkReader(std::shared_ptr<Socket> socket) : _socket(socket) {}
 };

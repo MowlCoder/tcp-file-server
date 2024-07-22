@@ -1,23 +1,26 @@
 #include "reader.h"
 #include "errors.h"
 
-#include <arpa/inet.h>
-#include <sys/socket.h>
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #include <WinSock2.h>
+#else
+    #include <arpa/inet.h>
+#endif
 
 #include <fstream>
-
 #include <stdexcept>
 #include <vector>
 
 int32_t NetworkReader::ReadInt32() const {
     int32_t value = 0;
-    _tcpSocket->recvData(&value, sizeof(value));
+    _socket->recvData(&value, sizeof(value));
     return ntohl(value);
 }
 
 bool NetworkReader::ReadBool() const {
     bool value = 0;
-    _tcpSocket->recvData(&value, sizeof(value));
+    _socket->recvData(&value, sizeof(value));
     return value;
 }
 
@@ -30,8 +33,8 @@ std::string NetworkReader::ReadString() const {
 
     int remainBytes = strSize;
     int recvBytes = 0;
-    
-    while ((remainBytes > 0) && ((recvBytes = _tcpSocket->recvData(&buffer[0], buffer.size())) > 0)) {
+
+    while ((remainBytes > 0) && ((recvBytes = _socket->recvData(&buffer[0], buffer.size())) > 0)) {
         str.append(buffer.cbegin(), buffer.cend());
         remainBytes -= recvBytes;
     }
@@ -64,14 +67,10 @@ void NetworkReader::ReadFile(const std::string& defaultPath) const {
     int received_bytes = 0;
     char buf[BUFSIZ];
 
-    while ((remain_data > 0) && ((received_bytes = _tcpSocket->recvData(buf, BUFSIZ)) > 0)) {
+    while ((remain_data > 0) && ((received_bytes = _socket->recvData(buf, BUFSIZ)) > 0)) {
         newFile.write(buf, received_bytes);
         remain_data -= received_bytes;
     }
 
     newFile.close();
-}
-
-NetworkReader::NetworkReader(TCPSocket* tcpSocket) {
-    _tcpSocket = tcpSocket;
 }

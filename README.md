@@ -2,4 +2,6 @@
 
 TODO:
 
-- Windows support
+- ~~Windows support~~
+- Linux support
+- Cmake

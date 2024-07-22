@@ -2,11 +2,14 @@
 #include <string>
 #include <filesystem>
 #include <vector>
+#include <memory>
 
 #include "network/writer.h"
 #include "network/reader.h"
 #include "network/errors.h"
 #include "network/tcpServer.h"
+
+#include "commands/commandType.h"
 
 const std::filesystem::path FILE_DIR_PATH = std::filesystem::path("./static");
 const std::string PORT = "7654";
@@ -14,41 +17,55 @@ const std::string PORT = "7654";
 void* handleClient(void* arg) {
     int clientSocketFd = *((int*)arg);
 
-    TCPSocket* tcpSocket = new TCPSocket(clientSocketFd);
-    NetworkReader netReader = NetworkReader(tcpSocket);
-    NetworkWriter netWriter = NetworkWriter(tcpSocket);
+    auto socket = std::make_shared<Socket>(clientSocketFd);
+    NetworkReader netReader = NetworkReader(socket);
+    NetworkWriter netWriter = NetworkWriter(socket);
 
     std::cout << "INFO: new connection with socket " << clientSocketFd << std::endl;
 
     while (true) {
         try {
             int32_t commandType = netReader.ReadInt32();
+            Command cmd = int32ToCommand(commandType);
 
-            if (commandType == 0) {
+            if (cmd == Command::UNKNOWN) {
                 break;
             }
 
-            if (commandType == 1) {
+            switch (cmd)
+            {
+            case Command::LIST: {
                 std::vector<std::string> fileNames{};
 
                 for (const auto& entry : std::filesystem::directory_iterator(FILE_DIR_PATH)) {
                     if (entry.is_regular_file()) {
-                        fileNames.push_back(entry.path().filename());
+                        fileNames.push_back(entry.path().filename().string());
                     }
                 }
 
                 netWriter.WriteStringList(fileNames);
-            } else if (commandType == 2) {
+
+                break;
+            }
+            case Command::UPLOAD: {
                 netReader.ReadFile(FILE_DIR_PATH.string());
-            } else if (commandType == 3) {
+                break;
+            }
+            case Command::DOWNLOAD: {
                 auto filename = std::filesystem::path(netReader.ReadString());
 
                 if (!std::filesystem::exists(FILE_DIR_PATH / filename)) {
                     netWriter.WriteBool(false);
                 } else {
                     netWriter.WriteBool(true);
-                    netWriter.WriteFile(FILE_DIR_PATH / filename, filename);
+                    netWriter.WriteFile((FILE_DIR_PATH / filename).string(), filename.string());
                 }
+
+                break;
+            }
+            default:
+                std::cout << "ERROR: receive invalid command" << std::endl;
+                break;
             }
         } catch (const SocketClosedException& e) {
             break;
@@ -60,8 +77,11 @@ void* handleClient(void* arg) {
 
     std::cout << "INFO: connection was closed with socket " << clientSocketFd << std::endl;
 
-    close(clientSocketFd);
-    delete tcpSocket;
+    #ifdef _WIN32
+        closesocket(clientSocketFd);
+    #else
+        close(clientSocketFd);
+    #endif
     delete (int*)arg;
 
     return nullptr;
@@ -69,7 +89,6 @@ void* handleClient(void* arg) {
 
 int main(void) {
     TCPServer server = TCPServer(PORT);
-
     if (!server.serve()) {
         return 1;
     }

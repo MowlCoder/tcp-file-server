@@ -1,22 +1,29 @@
 #include "tcpClient.h"
 
+#include <iostream>
 #include <signal.h>
 
 bool TCPClient::connectToServer() {
-    signal(SIGPIPE, SIG_IGN);
+    #ifdef SIGPIPE
+        signal(SIGPIPE, SIG_IGN);
+    #endif
 
-    if (connect(_socket->getSocketFd(), _addr->ai_addr, _addr->ai_addrlen) < 0) {
-        fprintf(stderr, "ERROR: can not connect to server\n");
+    _tcpSocket->initSocket();
+    _reader = std::make_shared<NetworkReader>(_tcpSocket->getSocket());
+    _writer = std::make_shared<NetworkWriter>(_tcpSocket->getSocket());
+
+    if (connect(_tcpSocket->getSocketFd(), _tcpSocket->getAddr()->ai_addr, _tcpSocket->getAddr()->ai_addrlen) < 0) {
+        std::cout << "ERROR: can not connect to server, error code - " << WSAGetLastError() << std::endl;
         return false;
     }
 
     return true;
 }
 
-const NetworkReader* TCPClient::reader() const {
+const std::shared_ptr<NetworkReader> TCPClient::reader() const {
     return _reader;
 }
 
-const NetworkWriter* TCPClient::writer() const {
+const std::shared_ptr<NetworkWriter> TCPClient::writer() const {
     return _writer;
 }

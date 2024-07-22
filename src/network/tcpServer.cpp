@@ -15,22 +15,31 @@ void TCPServer::acceptConnections(ClientHandler handler) {
 
         int* clientFdArg = new int(connected_fd);
 
-        pthread_t thread_id;
-        pthread_create(&thread_id, nullptr, handler, clientFdArg);
-        pthread_detach(thread_id);
+        #ifdef _WIN32
+            std::thread clientThread(handler, clientFdArg);
+            clientThread.detach();
+        #else
+            pthread_t thread_id;
+            pthread_create(&thread_id, nullptr, handler, clientFdArg);
+            pthread_detach(thread_id);
+        #endif
     }
 }
 
 bool TCPServer::serve() {
-    signal(SIGPIPE, SIG_IGN);
+    #ifdef SIGPIPE
+        signal(SIGPIPE, SIG_IGN);
+    #endif
 
-    int socket_reuse = 1;
+    _socket->initSocket();
+
+    char socket_reuse = '1';
     if (setsockopt(_socket->getSocketFd(), SOL_SOCKET, SO_REUSEADDR, &socket_reuse, sizeof(int)) == -1) {
         std::cout << "ERROR can't set socket option to reuse port" << std::endl;
         return false;
     }
 
-    if (bind(_socket->getSocketFd(), _addr->ai_addr, _addr->ai_addrlen) < 0) {
+    if (bind(_socket->getSocketFd(), _socket->getAddr()->ai_addr, _socket->getAddr()->ai_addrlen) < 0) {
         std::cout << "ERROR: can not bind socket to port" << std::endl;
         return false;
     }

@@ -1,31 +1,30 @@
 #include "writer.h"
 #include "errors.h"
 
-#include <arpa/inet.h>
-
 #include <stdexcept>
 #include <fstream>
 
 #include <stdio.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <sys/sendfile.h>
 #include <iostream>
+
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #include <WinSock2.h>
+#else
+    #include <arpa/inet.h>
+#endif
 
 void NetworkWriter::WriteInt32(int32_t val) const {
     int32_t networkVal = htonl(val);
-    _tcpSocket->sendData(&networkVal, sizeof(networkVal));
+    _socket->sendData(&networkVal, sizeof(networkVal));
 }
 
 void NetworkWriter::WriteBool(bool val) const {
-    _tcpSocket->sendData(&val, sizeof(val));
+    _socket->sendData(&val, sizeof(val));
 }
 
 void NetworkWriter::WriteStringList(const std::vector<std::string>& list) const {
@@ -44,7 +43,7 @@ void NetworkWriter::WriteString(const std::string& val) const {
     int sendBytes = 0;
     int bytesToSend = val.size() > 4096 ? 4096 : val.size();
 
-    while ((remainBytes > 0) && ((sendBytes = _tcpSocket->sendData((void*)(val.c_str() + offset), bytesToSend)) > 0)) {
+    while ((remainBytes > 0) && ((sendBytes = _socket->sendData((void*)(val.c_str() + offset), bytesToSend)) > 0)) {
         remainBytes -= sendBytes;
         offset += sendBytes;
     }
@@ -65,18 +64,16 @@ void NetworkWriter::WriteFile(const std::string& path, const std::string& filena
     int remainData = fileStat.st_size;
     int sendBytes = 0;
     int bufSize = fileStat.st_size > 4096 ? 4096 : fileStat.st_size;
-    char buf[bufSize];
+    char* buf = new char[bufSize];
 
     while (remainData > 0) {
         inputFile.read(buf, bufSize);
-        sendBytes = _tcpSocket->sendData(buf, bufSize);
+        sendBytes = _socket->sendData(buf, bufSize);
 
         if (sendBytes > 0) {
             remainData -= sendBytes;
         }
     }
-}
 
-NetworkWriter::NetworkWriter(TCPSocket* tcpSocket) {
-    _tcpSocket = tcpSocket;
+    delete[] buf;
 }
