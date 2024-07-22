@@ -13,7 +13,12 @@ bool TCPClient::connectToServer() {
     _writer = std::make_shared<NetworkWriter>(_tcpSocket->getSocket());
 
     if (connect(_tcpSocket->getSocketFd(), _tcpSocket->getAddr()->ai_addr, _tcpSocket->getAddr()->ai_addrlen) < 0) {
-        std::cout << "ERROR: can not connect to server, error code - " << WSAGetLastError() << std::endl;
+        #ifdef _WIN32
+            std::cout << "ERROR: can not connect to server, error code - " << WSAGetLastError() << std::endl;
+        #else
+            std::cout << "ERROR: can not connect to server, error code: ";
+            perror("connect");
+        #endif
         return false;
     }
 
