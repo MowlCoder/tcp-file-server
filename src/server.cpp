@@ -64,7 +64,7 @@ void* handleClient(void* arg) {
                 break;
             }
             default:
-                std::cout << "ERROR: receive invalid command" << std::endl;
+                std::cout << "ERROR: receive invalid command " << commandType << std::endl;
                 break;
             }
         } catch (const SocketClosedException& e) {

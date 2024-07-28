@@ -12,13 +12,7 @@
 const std::string IP = "127.0.0.1";
 const std::string PORT = "7654";
 
-int main(void) {
-    TCPClient tcpClient = TCPClient(IP, PORT);
-
-    if (!tcpClient.connectToServer()) {
-        return 1;
-    }
-
+void runLoop(const TCPClient& tcpClient) {
     std::cout << "Commands: list, upload, download, quit" << std::endl;
 
     while (true) {
@@ -31,7 +25,7 @@ int main(void) {
             switch (cmd)
             {
             case Command::QUIT:
-                return 0;
+                return;
             case Command::LIST: {
                 tcpClient.writer()->WriteInt32(commandToInt32(cmd));
                 std::vector<std::string> fileNames = tcpClient.reader()->ReadStringList();
@@ -53,7 +47,8 @@ int main(void) {
 
                 if (!std::filesystem::exists(filePath)) {
                     std::cout << "ERROR: file " << filePath << " not found" << std::endl;
-                } else {
+                }
+                else {
                     tcpClient.writer()->WriteInt32(commandToInt32(cmd));
                     tcpClient.writer()->WriteFile(filePath, fileName);
                 }
@@ -78,22 +73,42 @@ int main(void) {
                     }
 
                     tcpClient.reader()->ReadFile(filePath);
-                } else {
+                }
+                else {
                     std::cout << "ERROR: file " << fileName << " not exists on server" << std::endl;
                 }
+                break;
             }
             default:
                 std::cout << "WARNING: unknown command" << std::endl;
                 break;
             }
-        } catch (const SocketClosedException& e) {
+        }
+        catch (const SocketClosedException& e) {
             std::cout << "ERROR: connection with server was interrupted" << std::endl;
             break;
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception& e) {
             std::cout << "ERROR: " << e.what() << std::endl;
             break;
         }
     }
+}
 
-    return 0;
+int main(void) {
+    TCPClient tcpClient = TCPClient(IP, PORT);
+
+    int exitCode = 0;
+
+    if (!tcpClient.connectToServer()) {
+        exitCode = 1;
+    }
+    else {
+        runLoop(tcpClient);
+    }
+
+    std::cout << "Press enter to quit app" << std::endl;
+    getchar();
+
+    return exitCode;
 }
