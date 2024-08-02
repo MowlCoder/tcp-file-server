@@ -30,13 +30,7 @@ void TCPSocket::initSocket() {
 }
 
 void TCPSocket::closeSocket() {
-    #ifdef _WIN32
-        WSACleanup();
-        closesocket(_socket->getSocketFd());
-    #else
-        close(_socket->getSocketFd());
-    #endif
-
+    _socket->close();
     freeaddrinfo(_addr);
 }
 

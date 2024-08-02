@@ -12,6 +12,7 @@ public:
     void initWinsock();
 
     int getSocketFd() const;
+    void close();
 
     Socket(const int socketFd) : _socketFd(socketFd) {}
 };

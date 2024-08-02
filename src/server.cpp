@@ -77,11 +77,7 @@ void* handleClient(void* arg) {
 
     std::cout << "INFO: connection was closed with socket " << clientSocketFd << std::endl;
 
-    #ifdef _WIN32
-        closesocket(clientSocketFd);
-    #else
-        close(clientSocketFd);
-    #endif
+    socket->close();
     delete (int*)arg;
 
     return nullptr;
@@ -91,6 +87,10 @@ int main(void) {
     TCPServer server = TCPServer(PORT);
     if (!server.serve()) {
         return 1;
+    }
+
+    if (!std::filesystem::exists(FILE_DIR_PATH)) {
+        std::filesystem::create_directories(FILE_DIR_PATH);
     }
 
     std::cout << "INFO: server is listening on port " << PORT << std::endl;

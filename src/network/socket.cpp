@@ -45,3 +45,12 @@ int Socket::recvData(void* buf, size_t size) {
 int Socket::getSocketFd() const {
     return _socketFd;
 }
+
+void Socket::close() {
+    #ifdef _WIN32
+        WSACleanup();
+        closesocket(_socketFd);
+    #else
+        close(_socketFd);
+    #endif
+}
